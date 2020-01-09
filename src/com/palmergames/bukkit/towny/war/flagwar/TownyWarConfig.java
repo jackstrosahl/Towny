@@ -191,4 +191,16 @@ public class TownyWarConfig {
 	public static boolean isFlaggedTownblockTransfered() {
 		return TownySettings.getBoolean(ConfigNodes.WAR_ENEMY_FLAG_TAKES_OWNERSHIP_OF_TOWNBLOCKS);
 	}
+	
+	public static boolean isFlagWarGlowEffect(){
+		return TownySettings.getBoolean(ConfigNodes.WAR_ENEMY_FLAG_ENABLE_GLOW_EFFECT);
+	}
+	
+	public static int getFlagWarGlowEffectRadius() {
+		return TownySettings.getInt(ConfigNodes.WAR_ENEMY_FLAG_GLOW_RADIUS);
+	}
+	
+	public static int getFlagWarGlowEffectDuration() {
+		return TownySettings.getInt(ConfigNodes.WAR_ENEMY_FLAG_GLOW_DURATION);
+	}
 }

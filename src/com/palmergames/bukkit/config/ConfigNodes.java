@@ -1681,6 +1681,18 @@ public enum ConfigNodes {
 			"war.enemy.flag.light_block",
 			"torch",
 			"# This is the block a player must place to trigger the attack event."),
+	WAR_ENEMY_FLAG_ENABLE_GLOW_EFFECT(
+		"war.enemy.flag.glow.glow_enabled",
+		"false",
+		"# If true, living entities within the glow_radius from a flag's base will be given the Spectral / Glowing effect"),
+	WAR_ENEMY_FLAG_GLOW_RADIUS(
+		"war.enemy.flag.glow.glow_radius",
+		"20",
+		"# The radius at which to search for entities, from the flag's base. A value of 0 will disable the event."),
+	WAR_ENEMY_FLAG_GLOW_DURATION(
+		"war.enemy.flag.glow.glow_duration",
+		"20",
+		"# The duration (in ticks) that the glowing effect should be given. Will never be less than 20."),
 	WAR_ENEMY_BEACON("war.enemy.beacon", ""),
 	WAR_ENEMY_BEACON_RADIUS(
 			"war.enemy.beacon.radius",

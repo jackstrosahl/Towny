@@ -1,14 +1,18 @@
 package com.palmergames.bukkit.towny.war.flagwar;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import com.palmergames.bukkit.towny.Towny;
+import com.palmergames.bukkit.towny.object.Coord;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
-import com.palmergames.bukkit.towny.Towny;
-import com.palmergames.bukkit.towny.object.Coord;
+import java.util.ArrayList;
+import java.util.List;
 
 public class CellUnderAttack extends Cell {
 
@@ -21,6 +25,9 @@ public class CellUnderAttack extends Cell {
 	private int thread;
 	private long timeBetweenColorChange;
 
+	/**
+	 * @deprecated Provided for legacy compatibility.
+	 */
 	public CellUnderAttack(Towny plugin, String nameOfFlagOwner, Block flagBaseBlock) {
 		this(plugin, nameOfFlagOwner, flagBaseBlock, TownyWarConfig.getTimeBetweenFlagColorChange());
 	}
@@ -159,6 +166,39 @@ public class CellUnderAttack extends Cell {
 		}
 	}
 
+	public void castGlowToEntities(){
+		// Return prematurely if it is not enabled.
+		if (!TownyWarConfig.isFlagWarGlowEffect()) return;
+		
+		int radiusFromFlag = TownyWarConfig.getFlagWarGlowEffectRadius();
+		// Return prematurely if there is not a zero/negative radius.
+		if (radiusFromFlag <= 0) return;
+		
+		// Glow's duration is same as half of a flag's update interval to save resources.
+		int effectDuration = TownyWarConfig.getFlagWarGlowEffectDuration();
+		
+		// Enforce minimum duration
+		if (effectDuration < 20) effectDuration = 20;
+
+		// Gets base's location based on top's
+		Location flagBase = getTopOfFlagBlock().getLocation().subtract(0,1,0); 
+		World world = flagBase.getWorld();
+		assert world != null;
+		
+		List<Entity> entities = (List<Entity>) world.getNearbyEntities(flagBase, radiusFromFlag, radiusFromFlag, radiusFromFlag);
+		while(entities.iterator().hasNext()) {
+			Entity nextEntity = entities.iterator().next();
+			if (nextEntity instanceof LivingEntity) {
+				LivingEntity target = (LivingEntity) nextEntity;
+				if (!target.hasPotionEffect(PotionEffectType.GLOWING)) {
+					target.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, effectDuration,1));
+				}
+			}
+		}
+		if (!hasEnded() && thread != -1)
+			castGlowToEntities();
+	}
+
 	public void destroyFlag() {
 
 		flagLightBlock.setType(Material.AIR);
@@ -173,6 +213,7 @@ public class CellUnderAttack extends Cell {
 	public void begin() {
 
 		drawFlag();
+		castGlowToEntities();
 		thread = plugin.getServer().getScheduler().scheduleSyncRepeatingTask(plugin, new CellAttackThread(this), this.timeBetweenColorChange, this.timeBetweenColorChange);
 	}
 
