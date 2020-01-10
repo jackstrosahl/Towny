@@ -28,6 +28,7 @@ public class ConfirmationHandler {
 	private static HashMap<Resident, Town> townunclaimallconfirmations = new HashMap<Resident, Town>();
 	private static HashMap<Resident, Nation> nationdeleteconfirmations = new HashMap<Resident, Nation>();
 	private static HashMap<Resident, Integer> townypurgeconfirmations = new HashMap<Resident, Integer>();
+	private static HashMap<Resident, SpawnTaxConfirmation> townyspawntaxconfirmations = new HashMap<Resident, SpawnTaxConfirmation>();
 
 	public static void addConfirmation(final Resident r, final ConfirmationType type, Object extra) throws TownyException {
 		// We use "extra" in certain instances like the number of days for something e.t.c
@@ -76,6 +77,16 @@ public class ConfirmationHandler {
 				}
 			}.runTaskLater(plugin, 400);
 		}
+		if (type == ConfirmationType.SPAWN_TAX) {
+			r.setConfirmationType(type);
+			townyspawntaxconfirmations.put(r,(SpawnTaxConfirmation) extra);
+			new BukkitRunnable() {
+				@Override
+				public void run() {
+					removeConfirmation(r, type, false);
+				}
+			}.runTaskLater(plugin, 400);
+		}
 	}
 
 	public static void removeConfirmation(Resident r, ConfirmationType type, boolean successful) {
@@ -106,6 +117,14 @@ public class ConfirmationHandler {
 				sendmessage = true;
 			}
 			nationdeleteconfirmations.remove(r);
+			r.setConfirmationType(null);
+		}
+		if (type == ConfirmationType.SPAWN_TAX)
+		{
+			if(townyspawntaxconfirmations.containsKey(r) && !successful) {
+				sendmessage = true;
+			}
+			townyspawntaxconfirmations.remove(r);
 			r.setConfirmationType(null);
 		}
 		if (sendmessage) {
@@ -154,6 +173,10 @@ public class ConfirmationHandler {
 					return;
 				}
 			}
+		}
+		if (type== ConfirmationType.SPAWN_TAX) {
+			townyspawntaxconfirmations.get(r).confirm(r);
+			removeConfirmation(r, type, true);
 		}
 	}
 

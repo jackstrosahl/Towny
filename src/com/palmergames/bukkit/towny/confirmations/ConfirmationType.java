@@ -5,4 +5,5 @@ public enum ConfirmationType {
 	NATIONDELETE,
 	UNCLAIMALL,
 	PURGE,
+	SPAWN_TAX,
 }

@@ -11,6 +11,7 @@ import com.palmergames.bukkit.towny.TownySettings;
 import com.palmergames.bukkit.towny.TownyTimerHandler;
 import com.palmergames.bukkit.towny.confirmations.ConfirmationHandler;
 import com.palmergames.bukkit.towny.confirmations.ConfirmationType;
+import com.palmergames.bukkit.towny.confirmations.SpawnTaxConfirmation;
 import com.palmergames.bukkit.towny.event.NewTownEvent;
 import com.palmergames.bukkit.towny.event.TownBlockSettingsChangedEvent;
 import com.palmergames.bukkit.towny.event.TownInvitePlayerEvent;
@@ -2067,6 +2068,10 @@ public class TownCommand extends BaseCommand implements CommandExecutor {
 
 	}
 
+	public static boolean isTownyAdmin(Player player)
+	{
+		return TownyUniverse.getPermissionSource().has(player, PermissionNodes.TOWNY_COMMAND_TOWNYADMIN_TOWN_SPAWN_OTHER.getNode());
+	}
 	/**
 	 * Core spawn function to allow admin use.
 	 *
@@ -2079,7 +2084,7 @@ public class TownCommand extends BaseCommand implements CommandExecutor {
 	public static void townSpawn(Player player, String[] split, Town town, String notAffordMSG, Boolean outpost) {
 
 		try {
-			boolean isTownyAdmin = TownyUniverse.getPermissionSource().has(player, PermissionNodes.TOWNY_COMMAND_TOWNYADMIN_TOWN_SPAWN_OTHER.getNode());
+			boolean isTownyAdmin = isTownyAdmin(player);
 			Resident resident = TownyUniverse.getDataSource().getResident(player.getName());
 			Location spawnLoc;
 			TownSpawnLevel townSpawnPermission;
@@ -2222,14 +2227,40 @@ public class TownCommand extends BaseCommand implements CommandExecutor {
 				throw new TownyException(notAffordMSG);
 
 			// Used later to make sure the chunk we teleport to is loaded.
-			Chunk chunk = spawnLoc.getChunk();
+
 
 			// isJailed test
 			if (resident.isJailed()) {
 				TownyMessaging.sendErrorMsg(player, TownySettings.getLangString("msg_cannot_spawn_while_jailed"));
 				return;
 			}
+			// Show message if we are using Vault and are charging for spawn travel.
+			if ( !TownyUniverse.getPermissionSource().testPermission(player, PermissionNodes.TOWNY_COMMAND_TOWNYADMIN_TOWN_SPAWN_FREECHARGE.getNode()) ) {
+				TownyEconomyObject payee = town;
+				if (!TownySettings.isTownSpawnPaidToTown())
+					payee = TownyEconomyObject.SERVER_ACCOUNT;
+				if (travelCost > 0 && TownySettings.isUsingEconomy()) {
+					ConfirmationHandler.addConfirmation(resident, ConfirmationType.SPAWN_TAX, new SpawnTaxConfirmation(payee,travelCost,spawnLoc,townSpawnPermission));
+					TownyMessaging.sendConfirmationMessage(player, String.format(TownySettings.getLangString("msg_confirm_cost_spawn"),TownyEconomyHandler.getFormattedBalance(travelCost)), null, null, null);
+					return;
+				}
+			}
 
+			finishTeleport(isTownyAdmin,player,resident,spawnLoc,travelCost);
+		} catch (TownyException e) {
+			TownyMessaging.sendErrorMsg(player, e.getMessage());
+		} catch (EconomyException e) {
+			TownyMessaging.sendErrorMsg(player, e.getMessage());
+		}
+	}
+
+	public static void finishTeleport(Player player, Resident resident, Location spawnLoc, double travelCost) throws TownyException
+	{
+		finishTeleport(isTownyAdmin(player),player,resident,spawnLoc,travelCost);
+	}
+
+	public static void finishTeleport(boolean isTownyAdmin, Player player, Resident resident, Location spawnLoc, double travelCost) {
+			Chunk chunk = spawnLoc.getChunk();
 			// Essentials tests
 			boolean UsingESS = plugin.isEssentials();
 
@@ -2250,17 +2281,6 @@ public class TownCommand extends BaseCommand implements CommandExecutor {
 					TownyMessaging.sendErrorMsg(player, "Error: " + e.getMessage());
 					// cooldown?
 					return;
-				}
-			}
-
-			
-			// Show message if we are using Vault and are charging for spawn travel.
-			if ( !TownyUniverse.getPermissionSource().testPermission(player, PermissionNodes.TOWNY_COMMAND_TOWNYADMIN_TOWN_SPAWN_FREECHARGE.getNode()) ) {
-				TownyEconomyObject payee = town;
-				if (!TownySettings.isTownSpawnPaidToTown())					
-					payee = TownyEconomyObject.SERVER_ACCOUNT;
-				if (travelCost > 0 && TownySettings.isUsingEconomy() && resident.payTo(travelCost, payee, String.format("Town Spawn (%s)", townSpawnPermission))) {
-					TownyMessaging.sendMsg(player, String.format(TownySettings.getLangString("msg_cost_spawn"), TownyEconomyHandler.getFormattedBalance(travelCost)));
 				}
 			}
 
@@ -2288,11 +2308,7 @@ public class TownCommand extends BaseCommand implements CommandExecutor {
 					player.teleport(spawnLoc, TeleportCause.COMMAND);
 				}
 			}
-		} catch (TownyException e) {
-			TownyMessaging.sendErrorMsg(player, e.getMessage());
-		} catch (EconomyException e) {
-			TownyMessaging.sendErrorMsg(player, e.getMessage());
-		}
+
 	}
 
 	public void townDelete(Player player, String[] split) {
